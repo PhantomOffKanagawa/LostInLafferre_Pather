@@ -1,6 +1,7 @@
 import numpy as np
 from shapely.geometry import Polygon, LineString, MultiLineString, Point, GeometryCollection
 import pygeoops
+from xml.etree import ElementTree as ET
 
 def shapely_to_pygame(shape):
     """
@@ -234,3 +235,15 @@ def polygon_area(polygon):
         x2, y2 = polygon[(i + 1) % n]
         area += x1 * y2 - x2 * y1
     return abs(area) / 2.0
+
+def export_polyline(points):
+    """Creates an SVG polyline element with the given points and color."""
+    polyline = ET.Element('polyline', points=" ".join(f"{x},{y}" for x, y in points))
+    # polyline.set('style', f"fill:none;stroke:rgb{color};stroke-width:2")
+    return polyline
+
+def export_polygon(points):
+    """Creates an SVG polygon element with the given points and color."""
+    polygon = ET.Element('polygon', points=" ".join(f"{x},{y}" for x, y in points))
+    # polygon.set('style', f"fill:none;stroke:rgb{color};stroke-width:2")
+    return polygon
