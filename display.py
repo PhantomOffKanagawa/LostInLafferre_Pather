@@ -9,6 +9,8 @@ from svg_parser import parse_svg, export_svg
 from classes import MapElement, Elevator, Stairs, Space, Entrance, Wall, MidlinePath, GenericPath, Mode
 from classes import NormalMode, ElevatorMode, StairsMode, NamingMode, ModeHandler
 from values import Colors, Paths, KeyBindings, Constants
+from collections import defaultdict
+import networkx as nx
 
 class MapWindow:
     """Main map display and interaction window"""
@@ -264,23 +266,58 @@ class MapWindow:
         print(f"Generated {len(self.element_stores['MidlinePath'])} midline path segments")
     
     def calculate_all_midline_paths(self):
-        """Calculate midline paths for all spaces except named ones"""
+        """Calculate midline paths for all spaces except named ones and keep only the longest combined midline"""
         # Save the current selection state
         previous_selection = [space.selected for space in self.element_stores['Space']]
         
         # Select all spaces except named ones
         named_indices = [i for i, space in enumerate(self.element_stores['Space']) if space.name]
-        for i, space in enumerate(self.element_stores['Space']):
+        for i, space in enumerate(self.element_stores['Space']): 
             space.selected = i not in named_indices
         
         # Calculate midlines
         self.calculate_midline_paths()
+        
+        # Find the longest combined midline
+        longest_midline = self.find_longest_combined_midline(self.element_stores['MidlinePath'])
+
+        for midline in longest_midline:
+            if any (point == None for point in midline.points):
+                print(midline.points)
+                longest_midline.remove(midline)
+                continue
+        
+        # Keep only the longest midline
+        self.element_stores['MidlinePath'] = longest_midline
         
         # Restore previous selection
         for i, selected in enumerate(previous_selection):
             if i < len(self.element_stores['Space']):
                 self.element_stores['Space'][i].selected = selected
                 # self.element_stores['Space'][i].update_color()
+    
+    def find_longest_combined_midline(self, midlines):
+        """Find the longest combined midline from a list of midlines"""
+
+        from polyline_evil import merge_polylines
+
+        list_midlines = [midline.points for midline in midlines]
+
+        longest_midlines = merge_polylines(list_midlines)
+
+        print(f"Longest midlines identified: {len(longest_midlines)}")
+        longest_midlines = [MidlinePath(points, i) for i, points in enumerate(longest_midlines)]
+
+        for midline in midlines:
+            print(f"Midline {midline.id}: {len(midline.points)} points")
+            if any(midline.points == lm.points for lm in longest_midlines):
+                midline.selected = False
+                midline.color = Colors.MIDLINE
+            else:
+                midline.selected = True
+                midline.color = Colors.MIDLINE_SELECTED
+
+        return midlines
     
     def export_svg(self, debug=False):
         """Export the current state to an SVG file"""

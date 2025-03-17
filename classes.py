@@ -279,11 +279,16 @@ class MidlinePath:
         # Transform points for drawing
         transformed_points = [transform_point(p, scale, offset) for p in self.points]
         # Draw polygon
-        color = Colors.MIDLINE
+        color = Colors.MIDLINE if not self.selected else Colors.MIDLINE_SELECTED
         pygame.draw.lines(screen, color, False, transformed_points, 3)
     
     def export(self):
         """Creates an SVG polyline element with the midline's points"""
+        
+        # Check if the midline is selected
+        if not self.selected:
+            return None, None
+        
         polyline = export_polyline(self.points)
         polyline.set('data-id', str(self.id))
         polyline.set('data-type', 'midline')

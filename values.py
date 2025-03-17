@@ -8,6 +8,7 @@ class Colors:
     HIGHLIGHT = (50, 50, 50)  # Darker
     CLICKED = (0, 150, 150)  # Orange
     MIDLINE = (255, 0, 0)  # Red
+    MIDLINE_SELECTED = (0, 255, 0)  # Green
     ELEVATOR = (255, 0, 255)  # Magenta
     ELEVATOR_SELECTED = (255, 150, 255)  # Light Magenta
     STAIRS = (200, 200, 0)  # Yellow
