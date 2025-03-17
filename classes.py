@@ -1,5 +1,5 @@
 import pygame
-from geometry_utils import transform_point
+from geometry_utils import find_innermost_polygon, transform_point, is_point_inside_polygon
 from typing import Type
 from values import Colors, Constants, KeyBindings
 from geometry_utils import export_polygon, export_polyline
@@ -149,6 +149,7 @@ class Space():
         self.selected = False
         self.name = None  # Name of the space (if named)
         self.color = Colors.SPACE  # Default color for space
+        self.name_points = None  # Points for the name (if applicable)
     
     def set_selected(self, selected):
         self.selected = selected
@@ -160,10 +161,11 @@ class Space():
         color = Colors.HIGHLIGHT if self.selected else Colors.SPACE
         pygame.draw.polygon(screen, color, transformed_points)
         # Draw name if applicable
-        if self.name and transformed_points:
+        if self.name and self.name_points:
+            transformed_name_points = transform_point(self.name_points, scale, offset)
             # Calculate center of the space
-            center_x = sum(p[0] for p in transformed_points) / len(transformed_points)
-            center_y = sum(p[1] for p in transformed_points) / len(transformed_points)
+            center_x = transformed_name_points[0]
+            center_y = transformed_name_points[1]
             
             font = pygame.font.SysFont(Constants.DEFAULT_FONT, 14)
             text = font.render(self.name, True, Colors.NAME)
@@ -203,12 +205,13 @@ class Space():
         polygon = export_polygon(self.points)
         polygon.set('data-id', str(self.id))
         polygon.set('data-type', 'space')
-        polygon.set('data-name', self.name if self.name else '')
+        if self.name:
+            polygon.set('data-name', self.name if self.name else '')
 
         if self.name:
             text = ET.Element('text', {
-                'x': str(self.points[0][0]),
-                'y': str(self.points[0][1]),
+                'x': str(self.name_points[0]),
+                'y': str(self.name_points[1]),
                 'text-anchor': 'middle',
                 'dy': '.3em',
                 'style': f'font-size:14px; fill:rgb{Colors.NAME};',
@@ -226,6 +229,17 @@ class Entrance:
         self.id = entrance_id
         self.selected = False
         self.color = Colors.ENTRANCE  # Default color for entrance
+        self.name = None  # Name of the entrance (if applicable)
+
+    def add_name(self, all_spaces):
+        """Add name to the entrance based on the spaces it touches"""
+        # Find the space that the entrance touches
+        midpoint = ((self.points[0][0] + self.points[1][0]) / 2, 
+                    (self.points[0][1] + self.points[1][1]) / 2)
+
+        for space in all_spaces:
+            if is_point_inside_polygon(midpoint, space.points, tolerance=5):
+                self.name = space.name
     
     def draw(self, screen, scale, offset):
         # Transform points for drawing
@@ -240,9 +254,24 @@ class Entrance:
         polyline.set('data-id', str(self.id))
         polyline.set('data-type', 'entrance')
         
-        # TODO: ADD ROOM NAME IF TOUCHING NAMED SPACE
-
-        return polyline, None
+        if self.name:
+            polyline.set('data-name', self.name if self.name else '')
+        
+        if self.name:
+            midpoint = ((self.points[0][0] + self.points[1][0]) / 2, 
+                        (self.points[0][1] + self.points[1][1]) / 2)
+            text = ET.Element('text', {
+                'x': str(midpoint[0]),
+                'y': str(midpoint[1]),
+                'text-anchor': 'middle',
+                'dy': '.3em',
+                'style': f'font-size:7px; fill:rgb{Colors.NAME};',
+                'data-room-id': str(self.id)
+            })
+            text.text = self.name
+            return polyline, text
+        else:
+            return polyline, None
 
 class Wall:
     """Wall element"""
@@ -358,6 +387,10 @@ class ModeHandler:
     def handle_click(self, point, scale, offset, elements):
         """Handle click event based on the current mode"""
         return self.current_mode.handle_click(point, scale, offset, elements)
+    
+    def delete_selected(self, elements):
+        """Delete the selected element"""
+        return self.current_mode.delete_selected(elements)
 
 class Mode:
     """Base class for different interaction modes"""
@@ -422,6 +455,11 @@ class Mode:
     def create_element(self, position):
         """Create a new element based on the current mode"""
         pass
+
+    def delete_selected(self, elements):
+        """Delete the selected element"""
+        elements = [el for el in elements if not el.selected]
+        return elements
 
 
 class NormalMode(Mode):
@@ -516,5 +554,26 @@ class NamingMode(Mode):
 
     def handle_click(self, point, scale, offset, elements):
         # TODO: Handle click event for naming mode
+        transformed_click = transform_point(point, scale, offset)
+        clicked_space = find_innermost_polygon(transformed_click, [s.points for s in elements])
+        if clicked_space:
+            for space in elements:
+                if space.points == clicked_space:
+                    print(point)
+                    space.name_points = point
+                    space.name = self.get_current_name()
+                    space.set_selected(True)
+                    print(f"Space {space.id + 1} named: {space.name}")
+
+                    self.next_name()
+
         return elements
-        return super().handle_click(point, scale, offset, elements)
+    
+    def delete_selected(self, elements):
+        """Delete the selected element"""
+        for el in elements:
+            if el.selected and el.name:
+                el.name = None
+                el.set_selected(False)
+
+        return elements

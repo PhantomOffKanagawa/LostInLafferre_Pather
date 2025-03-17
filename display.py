@@ -212,10 +212,11 @@ class MapWindow:
     
     def delete_selected_items(self):
         """Delete selected elevators or stairs"""
+        
         current_mode_element = self.mode_handler.current_mode.element.__name__
         elements = self.element_stores[current_mode_element]
-        elements = [el for el in elements if not el.selected]
-        self.element_stores[current_mode_element] = elements
+
+        self.element_stores[current_mode_element] = self.mode_handler.current_mode.delete_selected(elements)
     
     def calculate_midline_paths(self):
         """Calculate midline paths for selected spaces"""

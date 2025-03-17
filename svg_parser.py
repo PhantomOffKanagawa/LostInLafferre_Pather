@@ -176,9 +176,16 @@ def export_svg(file_path, element_stores):
     """
     svg = ET.Element('svg', xmlns="http://www.w3.org/2000/svg", width="800", height="600")
     
+    text_group = ET.Element('g', id="text")
+    text_group.set("style", f"fill:none;stroke:rgb{Colors.TEXT};stroke-width:2")
+    
     for key, value in element_stores.items():
         print(f"Exporting {key} with {len(value)} elements")
-        print(f"Elements: {value}")
+        # print(f"Elements: {value}")
+
+        if key == "Entrance" and element_stores["Space"]:
+            for entrance in value:
+                entrance.add_name(element_stores["Space"])
 
         # Create a group for each type of element
         group = ET.Element('g', id=key)
@@ -187,12 +194,15 @@ def export_svg(file_path, element_stores):
         
             for element in value:
                 # TODO: Support Text elements
-                svg_element, _ = element.export()
-                group.append(svg_element)
+                svg_element, text_element = element.export()
+                if svg_element is not None:
+                    group.append(svg_element)
+                if text_element is not None:
+                    text_group.append(text_element)
 
             svg.append(group)  # Ensure the group is appended to the SVG
 
-    svg.append(group)
+    svg.append(text_group)  # Append text group to SVG
             
     tree = ET.ElementTree(svg)
     tree.write(file_path)
