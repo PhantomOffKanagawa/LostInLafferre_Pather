@@ -2,7 +2,7 @@ import pygame
 from geometry_utils import find_innermost_polygon, transform_point, is_point_inside_polygon
 from typing import Type
 from values import Colors, Constants, KeyBindings
-from geometry_utils import export_polygon, export_polyline
+from geometry_utils import export_polygon, export_polyline, export_point
 import xml.etree.ElementTree as ET
 
 class MapElement:
@@ -231,21 +231,38 @@ class Entrance:
         self.color = Colors.ENTRANCE  # Default color for entrance
         self.name = None  # Name of the entrance (if applicable)
 
+        self.midpoint = ((self.points[0][0] + self.points[1][0]) / 2,
+                        (self.points[0][1] + self.points[1][1]) / 2)
+
     def add_name(self, all_spaces):
         """Add name to the entrance based on the spaces it touches"""
         # Find the space that the entrance touches
-        midpoint = ((self.points[0][0] + self.points[1][0]) / 2, 
-                    (self.points[0][1] + self.points[1][1]) / 2)
+        midpoint = self.midpoint
 
         for space in all_spaces:
-            if is_point_inside_polygon(midpoint, space.points, tolerance=5):
-                self.name = space.name
+            if is_point_inside_polygon(midpoint, space.points, tolerance=3):
+                if space.name:
+                    self.name = space.name
+                    return
+
+        # for space in all_spaces:
+        #     # Check if the entrance points are inside the space polygon
+        #     if is_point_inside_polygon(self.points[0], space.points, tolerance=10):
+        #         if space.name:
+        #             self.name = space.name
+        #             return
+
+        #     if is_point_inside_polygon(self.points[1], space.points, tolerance=10):
+        #         if space.name:
+        #             self.name = space.name
+        #             return
     
     def draw(self, screen, scale, offset):
         # Transform points for drawing
         transformed_points = [transform_point(p, scale, offset) for p in self.points]
         # Draw polygon
         color = Colors.CLICKED if self.selected else Colors.ENTRANCE
+        color = color if not self.name else Colors.NAME
         pygame.draw.lines(screen, color, False, transformed_points, 3)
     
     def export(self):
@@ -253,13 +270,19 @@ class Entrance:
         polyline = export_polyline(self.points)
         polyline.set('data-id', str(self.id))
         polyline.set('data-type', 'entrance')
+
+        midpoint = self.midpoint
+        
+        coordinate = export_point(midpoint)
+        coordinate.set('data-id', str(self.id))
+        coordinate.set('data-type', 'entrance')
         
         if self.name:
             polyline.set('data-name', self.name if self.name else '')
+            coordinate.set('data-name', self.name if self.name else '')
         
         if self.name:
-            midpoint = ((self.points[0][0] + self.points[1][0]) / 2, 
-                        (self.points[0][1] + self.points[1][1]) / 2)
+            midpoint = self.midpoint
             text = ET.Element('text', {
                 'x': str(midpoint[0]),
                 'y': str(midpoint[1]),
@@ -269,9 +292,9 @@ class Entrance:
                 'data-room-id': str(self.id)
             })
             text.text = self.name
-            return polyline, text
+            return coordinate, text
         else:
-            return polyline, None
+            return None, None
 
 class Wall:
     """Wall element"""
@@ -466,9 +489,14 @@ class NormalMode(Mode):
     """Normal interaction mode"""
     def __init__(self):
         super().__init__()
+        self.element = Space  # Default element type
 
     def create_element(self, position):
         return None
+    
+    def delete_selected(self, elements):
+        dummy_mode = NamingMode()
+        return dummy_mode.delete_selected(elements)
 
 
 class ElevatorMode(Mode):
@@ -555,14 +583,14 @@ class NamingMode(Mode):
     def handle_click(self, point, scale, offset, elements):
         # TODO: Handle click event for naming mode
         transformed_click = transform_point(point, scale, offset)
-        clicked_space = find_innermost_polygon(transformed_click, [s.points for s in elements])
+        clicked_space = find_innermost_polygon(point, [s.points for s in elements])
         if clicked_space:
             for space in elements:
                 if space.points == clicked_space:
                     print(point)
                     space.name_points = point
                     space.name = self.get_current_name()
-                    space.set_selected(True)
+                    # space.set_selected(False)
                     print(f"Space {space.id + 1} named: {space.name}")
 
                     self.next_name()

@@ -247,3 +247,8 @@ def export_polygon(points):
     polygon = ET.Element('polygon', points=" ".join(f"{x},{y}" for x, y in points))
     # polygon.set('style', f"fill:none;stroke:rgb{color};stroke-width:2")
     return polygon
+
+def export_point(point, radius=5):
+    """Creates an SVG circle element with the given point and radius."""
+    circle = ET.Element('circle', cx=str(point[0]), cy=str(point[1]), r=str(radius))
+    return circle

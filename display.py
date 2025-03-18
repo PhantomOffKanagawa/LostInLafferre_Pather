@@ -49,7 +49,7 @@ class MapWindow:
         self.load_room_names()
         
         # Load saved settings if they exist
-        self.load_settings()
+        # self.load_settings()
         
         # Start the rendering loop
         self.running = True
@@ -139,6 +139,8 @@ class MapWindow:
         
         elif event.key == KeyBindings.ALL_MIDLINES:  # Calculate all midline paths
             self.calculate_all_midline_paths()
+            for entrance in self.element_stores["Entrance"]:
+                entrance.add_name(self.element_stores["Space"])
         
         elif event.key == KeyBindings.EXPORT:  # Export SVG
             self.export_svg()
@@ -165,7 +167,7 @@ class MapWindow:
             if self.mode_handler.is_mode(NormalMode):
                 self.handle_normal_click(transformed_mouse_pos)
             else:
-                self.handle_mode_click(screen_mouse_pos)
+                self.handle_mode_click(transformed_mouse_pos)
         
         elif event.button == 2:  # Middle click press
             self.dragging = True
@@ -243,8 +245,7 @@ class MapWindow:
             
             # Add paths from doors to the nearest point on the midline
             for entrance in self.element_stores['Entrance']:
-                midpoint = ((entrance.points[0][0] + entrance.points[1][0]) / 2, 
-                           (entrance.points[0][1] + entrance.points[1][1]) / 2)
+                midpoint = entrance.midpoint
                 if is_point_inside_polygon(midpoint, space.points, tolerance=5):
                     nearest_point = nearest_point_on_line(midpoint, midline_path)
                     self.element_stores['MidlinePath'].append(MidlinePath([midpoint, nearest_point], 
@@ -347,8 +348,11 @@ class MapWindow:
             
             "spaces": [{"id": space.id, 
                        "selected": space.selected, 
-                       "name": space.name} 
+                       "name": space.name,
+                       "name_points": space.name_points} 
                       for space in self.element_stores['Space']]
+
+
         }
         
         with open(file_path, 'w') as file:
@@ -391,12 +395,12 @@ class MapWindow:
                 # Load spaces (selection and names)
                 spaces_data = settings.get("spaces", [])
                 if spaces_data:
-                    for s_data in spaces_data:
-                        space_id = s_data.get("id", 0)
+                    for i, s_data in enumerate(spaces_data):
+                        space_id = i
                         if 0 <= space_id < len(self.element_stores['Space']):
                             self.element_stores['Space'][space_id].selected = s_data.get("selected", False)
                             self.element_stores['Space'][space_id].name = s_data.get("name")
-                            # self.element_stores['Space'][space_id].update_color()
+                            self.element_stores['Space'][space_id].name_points = s_data.get("name_points", None)
                 
                 print(f"Settings loaded from {file_path}")
         except FileNotFoundError:

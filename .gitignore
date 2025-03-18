@@ -4,3 +4,5 @@ output/
 
 # Ignore pycache
 __pycache__/
+
+*-phantom-ubuntu-laptop-safebackup-*
