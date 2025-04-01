@@ -1,6 +1,7 @@
 # Ignore input output folders to not release maps
 ver-*/
-output/
+output/*.svg
+output/*/
 
 # Ignore pycache
 __pycache__/

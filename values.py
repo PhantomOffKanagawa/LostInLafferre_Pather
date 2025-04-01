@@ -47,9 +47,9 @@ class Constants:
     MAX_ELEVATOR_ID = 99  # Maximum elevator ID
     MAX_STAIRS_ID = 99  # Maximum stairs ID
     DEFAULT_FONT = 'Arial'  # Default font for text
-    DEFAULT_RADIUS = 70  # Default radius for shapes
-    DEFAULT_FONT_SIZE = 65  # Default font size for text
-    ROOM_FONT_SIZE = 75  # Default font size for text
+    DEFAULT_RADIUS = 8  # Default radius for shapes
+    DEFAULT_FONT_SIZE = 12  # Default font size for text
+    ROOM_FONT_SIZE = 14  # Default font size for text
     MODE_NORMAL = 0  # Normal mode (no special mode)
     MODE_ELEVATOR = 1  # Elevator mode
     MODE_STAIRS = 2  # Stairs mode
