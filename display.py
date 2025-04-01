@@ -40,7 +40,7 @@ class MapWindow:
         pygame.display.set_caption(f"Pather - {map_name}")
         
         # View control variables
-        self.scale = 1.0
+        self.scale = 0.25
         self.offset = [0, 0]
         self.dragging = False
         self.drag_start = (0, 0)

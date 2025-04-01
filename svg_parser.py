@@ -37,6 +37,11 @@ def parse_svg(file_path, screen_width=800, screen_height=600):
     spaces = [normalize(shape, max_x, max_y, screen_width, screen_height) for shape in spaces]
     walls = [normalize(shape, max_x, max_y, screen_width, screen_height) for shape in walls]
     paths = [normalize(shape, max_x, max_y, screen_width, screen_height) for shape in paths]
+    
+    # entrances = [normalize(shape, max_x, max_y, svg_width, svg_height) for shape in entrances]
+    # spaces = [normalize(shape, max_x, max_y, svg_width, svg_height) for shape in spaces]
+    # walls = [normalize(shape, max_x, max_y, svg_width, svg_height) for shape in walls]
+    # paths = [normalize(shape, max_x, max_y, svg_width, svg_height) for shape in paths]
 
     # Convert to classes
     entrances = [Entrance(points) for points in entrances]

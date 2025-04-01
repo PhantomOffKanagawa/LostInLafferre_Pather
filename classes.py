@@ -43,9 +43,12 @@ class Elevator(MapElement):
         # Check if a point is within the elevator's circle
         x1, y1 = self.position
         x2, y2 = point
-        x1, y1 = transform_point((x1, y1), scale, offset)
+        # x1, y1 = transform_point((x1, y1), scale, offset)
+
+        print(f"Elevator clicked: {x1}, {y1} vs {x2}, {y2}")
+
         distance = ((x1 - x2) ** 2 + (y1 - y2) ** 2) ** 0.5
-        return distance <= self.radius * scale
+        return distance <= self.radius
 
     def draw(self, screen, scale, offset):
         # Draw elevator circle
@@ -54,7 +57,7 @@ class Elevator(MapElement):
         pygame.draw.circle(screen, color, (int(x), int(y)), int(self.radius * scale))
         
         # Draw elevator ID text
-        font = pygame.font.SysFont(Constants.DEFAULT_FONT, int(12 * scale))
+        font = pygame.font.SysFont(Constants.DEFAULT_FONT, int(Constants.DEFAULT_FONT_SIZE * scale))
         text = font.render(str(self.id), True, Colors.TEXT)
         text_rect = text.get_rect(center=(int(x), int(y)))
         screen.blit(text, text_rect)
@@ -79,7 +82,7 @@ class Elevator(MapElement):
             'y': str(cy),
             'text-anchor': 'middle',
             'dy': '.3em',  # Adjust vertical alignment
-            'style': 'font-size:12px; fill: white;'
+            'style': f'font-size:{Constants.DEFAULT_FONT_SIZE}px; fill: white;'
         }
         text = ET.Element('text', **text_attrs)
         text.text = str(self.id)
@@ -97,9 +100,8 @@ class Stairs(MapElement):
         # Check if a point is within the stairs' area (assuming a rectangular area)
         x1, y1 = self.position
         x2, y2 = point
-        x1, y1 = transform_point((x1, y1), scale, offset)
         distance = ((x1 - x2) ** 2 + (y1 - y2) ** 2) ** 0.5
-        return distance <= self.radius * 2 * scale
+        return distance <= self.radius * 2
 
     def draw(self, screen, scale, offset):
         # Draw stairs rectangle
@@ -109,7 +111,7 @@ class Stairs(MapElement):
         pygame.draw.rect(screen, color, (int(x - width / 2), int(y - height / 2), int(width), int(height)))
         
         # Draw stairs ID text
-        font = pygame.font.SysFont(Constants.DEFAULT_FONT, int(12 * scale))
+        font = pygame.font.SysFont(Constants.DEFAULT_FONT, int(Constants.DEFAULT_FONT_SIZE * scale))
         text = font.render(str(self.id), True, Colors.TEXT)
         text_rect = text.get_rect(center=(int(x), int(y)))
         screen.blit(text, text_rect)
@@ -134,7 +136,7 @@ class Stairs(MapElement):
             'y': str(cy),
             'text-anchor': 'middle',
             'dy': '.3em',  # Adjust vertical alignment
-            'style': 'font-size:12px; fill: white;'
+            'style': f'font-size:{Constants.DEFAULT_FONT_SIZE}px; fill: white;'
         }
         text = ET.Element('text', **text_attrs)
         text.text = str(self.id)
@@ -167,7 +169,7 @@ class Space():
             center_x = transformed_name_points[0]
             center_y = transformed_name_points[1]
             
-            font = pygame.font.SysFont(Constants.DEFAULT_FONT, 14)
+            font = pygame.font.SysFont(Constants.DEFAULT_FONT, int(Constants.ROOM_FONT_SIZE * scale))
             text = font.render(self.name, True, Colors.NAME)
             text_rect = text.get_rect(center=(center_x, center_y))
             screen.blit(text, text_rect)
@@ -214,7 +216,7 @@ class Space():
                 'y': str(self.name_points[1]),
                 'text-anchor': 'middle',
                 'dy': '.3em',
-                'style': f'font-size:14px; fill:rgb{Colors.NAME};',
+                'style': f'font-size:{Constants.DEFAULT_FONT_SIZE}px; fill:rgb{Colors.NAME};',
                 'data-room-id': str(self.id)
             })
             text.text = self.name
@@ -265,7 +267,7 @@ class Entrance:
         color = color if not self.name else Colors.NAME
         pygame.draw.lines(screen, color, False, transformed_points, 3)
     
-    def export(self):
+    def export(self, frontend=False):
         """Creates an SVG polyline element with the entrance's points"""
         polyline = export_polyline(self.points)
         polyline.set('data-id', str(self.id))
@@ -288,11 +290,14 @@ class Entrance:
                 'y': str(midpoint[1]),
                 'text-anchor': 'middle',
                 'dy': '.3em',
-                'style': f'font-size:7px; fill:rgb{Colors.NAME};',
+                'style': f'font-size:{Constants.DEFAULT_FONT_SIZE/2}px; fill:rgb{Colors.NAME};',
                 'data-room-id': str(self.id)
             })
             text.text = self.name
-            return coordinate, text
+            if frontend:
+                return polyline, text
+            else:
+                return coordinate, text
         else:
             return None, None
 
@@ -459,7 +464,9 @@ class Mode:
         """Handle click event based on the current mode"""
         clicked_element = None
         for element in elements:
-            if isinstance(element, self.element) and element.is_clicked(point, scale, offset):
+            print(f"Checking {element.__class__.__name__} with ID {element.id} for click")
+            if element.is_clicked(point, scale, offset):
+                print(f"Clicked on {element.__class__.__name__} with ID {element.id}")
                 clicked_element = element
                 break
 
