@@ -6,8 +6,8 @@ from geometry_utils import transform_shapes, inverse_transform_point, zoom_at, i
 from geometry_utils import find_innermost_polygon, is_point_inside_polygon, shapely_to_pygame
 from geometry_utils import find_midline_path, nearest_point_on_line, transform_point
 from svg_parser import parse_svg, export_svg
-from classes import MapElement, Elevator, Stairs, Space, Entrance, Wall, MidlinePath, GenericPath, Mode
-from classes import NormalMode, ElevatorMode, StairsMode, NamingMode, ModeHandler
+from classes import BuildingEntrance, MapElement, Elevator, Stairs, Space, Entrance, Wall, MidlinePath, GenericPath, Mode
+from classes import NormalMode, ElevatorMode, StairsMode, BuildingEntranceMode, NamingMode, ModeHandler
 from values import Colors, Paths, KeyBindings, Constants
 from collections import defaultdict
 import networkx as nx
@@ -33,20 +33,23 @@ class MapWindow:
             self.element_stores[cls.__name__] = svg_outputs.get(cls.__name__, [])
 
         # Initialize mode handler
-        self.mode_handler = ModeHandler([NormalMode(), ElevatorMode(), StairsMode(), NamingMode()])
+        self.mode_handler = ModeHandler([NormalMode(), ElevatorMode(), StairsMode(), BuildingEntranceMode(), NamingMode()])
 
         # Create a new pygame window
         self.window_id = pygame.display.set_mode((self.width, self.height), pygame.RESIZABLE | pygame.HWSURFACE)
         pygame.display.set_caption(f"Pather - {map_name}")
         
         # View control variables
-        self.scale = 0.25
+        self.scale = 1
         self.offset = [0, 0]
         self.dragging = False
         self.drag_start = (0, 0)
         
         # Load room names from JSON
         self.load_room_names()
+
+        # Load entrance names from JSON
+        self.load_building_entrances()
         
         # Load saved settings if they exist
         # self.load_settings()
@@ -71,7 +74,19 @@ class MapWindow:
         except json.JSONDecodeError:
             print("Error parsing room names file.")
             self.mode_handler.get_mode(NamingMode).set_room_names([])
-            
+
+    def load_building_entrances(self):
+        """Load building entrances from JSON file"""
+        try:
+            with open(Paths.ROOM_NAMES_FILE + 'entrances.json', 'r') as file:
+                data = json.load(file)
+                entrances = list(data.values())
+                self.mode_handler.get_mode(BuildingEntranceMode).set_entrance_names(entrances)
+        except FileNotFoundError:
+            print("No building entrances file found.")
+        except json.JSONDecodeError:
+            print("Error parsing building entrances file.")
+
     # def save_room_names(self):
     #     """Save room names to JSON file"""
     #     with open(Paths.ROOM_NAMES_FILE, 'w') as file:
@@ -144,6 +159,9 @@ class MapWindow:
         
         elif event.key == KeyBindings.EXPORT:  # Export SVG
             self.export_svg()
+
+        elif event.key == KeyBindings.EXPORT_DEBUG:  # Export SVG with debug info
+            self.export_svg(frontend=True)
         
         elif event.key == KeyBindings.SAVE:  # Save settings
             self.save_settings()
@@ -321,13 +339,14 @@ class MapWindow:
 
         return midlines
     
-    def export_svg(self, debug=False):
+    def export_svg(self, frontend=False):
         """Export the current state to an SVG file"""
-        output_path = f"{Paths.SETTINGS_DIR}{self.map_name}_{'debug' if debug else 'output'}.svg"
+        output_path = f"{Paths.SETTINGS_DIR}{self.map_name}_{'frontend' if frontend else 'backend'}.svg"
         
         export_svg(
             output_path, 
-            self.element_stores
+            self.element_stores,
+            frontend=frontend
         )
     
     def save_settings(self):
@@ -350,7 +369,12 @@ class MapWindow:
                        "selected": space.selected, 
                        "name": space.name,
                        "name_points": space.name_points} 
-                      for space in self.element_stores['Space']]
+                      for space in self.element_stores['Space']],
+
+            "building_entrances": [{"position": entrance.position,
+                                   "id": entrance.id, 
+                                   "selected": entrance.selected} 
+                                   for entrance in self.element_stores['BuildingEntrance']],
 
 
         }
@@ -391,6 +415,18 @@ class MapWindow:
                         )
                         stair.selected = s_data.get("selected", False)
                         self.element_stores['Stairs'].append(stair)
+                
+
+                entrances_data = settings.get("building_entrances", [])
+                if entrances_data:
+                    self.element_stores['BuildingEntrance'] = []
+                    for e_data in entrances_data:
+                        entrance = BuildingEntrance(
+                            position=tuple(e_data["position"]), 
+                            entrance_id=e_data.get("id", 1)
+                        )
+                        entrance.selected = e_data.get("selected", False)
+                        self.element_stores['BuildingEntrance'].append(entrance)
                 
                 # Load spaces (selection and names)
                 spaces_data = settings.get("spaces", [])
@@ -438,7 +474,7 @@ class MapWindow:
         
         if not self.mode_handler.is_mode(NormalMode):            
             mode_text = self.mode_handler.current_mode.name
-            mode_text += " (ID: " + str(self.mode_handler.current_mode.current_id) + ")"
+            mode_text += " (ID: " + str(self.mode_handler.current_mode.get_display_name()) + ")"
             text_color = self.mode_handler.current_mode.color
         
         if mode_text:

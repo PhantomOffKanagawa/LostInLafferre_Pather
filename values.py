@@ -13,6 +13,8 @@ class Colors:
     ELEVATOR_SELECTED = (255, 150, 255)  # Light Magenta
     STAIRS = (200, 200, 0)  # Yellow
     STAIRS_SELECTED = (255, 255, 0)  # Light Yellow
+    BUILDING_ENTRANCE = (0, 0, 255)  # Blue for building entrance
+    BUILDING_ENTRANCE_SELECTED = (0, 150, 255)  # Light Blue
     SHAPE = (0, 0, 0)  # Black
     NAME = (0, 0, 200)  # Dark Blue for room names
     TEXT = (255, 255, 255)  # White for text
@@ -36,6 +38,7 @@ class KeyBindings:
     LOAD = pygame.K_l  # Load selected spaces
     STAIRS_MODE = pygame.K_c  # Toggle stairs mode
     ELEVATOR_MODE = pygame.K_v  # Toggle elevator mode
+    BUILDING_ENTRANCE_MODE = pygame.K_b  # Toggle building entrance mode
     ID_UP = pygame.K_UP  # Increment ID
     ID_DOWN = pygame.K_DOWN  # Decrement ID
     DELETE = pygame.K_DELETE  # Delete selected item
@@ -54,3 +57,4 @@ class Constants:
     MODE_ELEVATOR = 1  # Elevator mode
     MODE_STAIRS = 2  # Stairs mode
     MODE_NAMING = 3  # Room naming mode
+    MODE_BUILDING_ENTRANCE = 4  # Building entrance mode

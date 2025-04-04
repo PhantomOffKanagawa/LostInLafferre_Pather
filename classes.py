@@ -23,7 +23,7 @@ class MapElement:
         # To be overridden by subclasses
         pass
     
-    def export(self):
+    def export(self, frontend=False):
         """Export the element as SVG (base implementation)"""
         # To be overridden by subclasses
         return None, None
@@ -62,7 +62,7 @@ class Elevator(MapElement):
         text_rect = text.get_rect(center=(int(x), int(y)))
         screen.blit(text, text_rect)
 
-    def export(self):
+    def export(self, frontend=False):
         """Creates an SVG circle element at the specified position with the given radius and color."""
         cx, cy = self.position
         attrs = {
@@ -116,7 +116,34 @@ class Stairs(MapElement):
         text_rect = text.get_rect(center=(int(x), int(y)))
         screen.blit(text, text_rect)
 
-    def export(self):
+class BuildingEntrance(MapElement):
+    """Building entrance element for connecting floors"""
+    def __init__(self, position, building_entrance_id=1):
+        super().__init__(position, building_entrance_id)
+        self.radius = Constants.DEFAULT_RADIUS  # Radius for drawing
+        self.color = Colors.BUILDING_ENTRANCE  # Default color for building entrance
+    
+    def is_clicked(self, point, scale, offset):
+        # Check if a point is within the building entrance's area (assuming a rectangular area)
+        x1, y1 = self.position
+        x2, y2 = point
+        distance = ((x1 - x2) ** 2 + (y1 - y2) ** 2) ** 0.5
+        return distance <= self.radius * 2
+
+    def draw(self, screen, scale, offset):
+        # Draw building entrance rectangle
+        x, y = transform_point(self.position, scale, offset)
+        width, height = self.radius * 2 * scale, self.radius * 2 * scale
+        color = Colors.BUILDING_ENTRANCE_SELECTED if self.selected else Colors.BUILDING_ENTRANCE
+        pygame.draw.rect(screen, color, (int(x - width / 2), int(y - height / 2), int(width), int(height)))
+        
+        # Draw building entrance ID text
+        font = pygame.font.SysFont(Constants.DEFAULT_FONT, int(Constants.DEFAULT_FONT_SIZE * scale))
+        text = font.render(str(self.id), True, Colors.TEXT)
+        text_rect = text.get_rect(center=(int(x), int(y)))
+        screen.blit(text, text_rect)
+
+    def export(self, frontend=False):
         """Creates an SVG circle element at the specified position with the given width, height, and color."""
         cx, cy = self.position
         attrs = {
@@ -174,7 +201,7 @@ class Space():
             text_rect = text.get_rect(center=(center_x, center_y))
             screen.blit(text, text_rect)
     
-    def export(self):
+    def export(self, frontend=False):
         """Creates an SVG polygon element with the space's points"""
         # attrs = {
         #     'points': ' '.join(f"{x},{y}" for x, y in self.points),
@@ -316,7 +343,7 @@ class Wall:
         color = Colors.CLICKED if self.selected else Colors.WALL
         pygame.draw.lines(screen, color, False, transformed_points, 3)
     
-    def export(self):
+    def export(self, frontend=False):
         """Creates an SVG polyline element with the wall's points"""
         polyline = export_polyline(self.points)
         polyline.set('data-id', str(self.id))
@@ -339,7 +366,7 @@ class MidlinePath:
         color = Colors.MIDLINE if not self.selected else Colors.MIDLINE_SELECTED
         pygame.draw.lines(screen, color, False, transformed_points, 3)
     
-    def export(self):
+    def export(self, frontend=False):
         """Creates an SVG polyline element with the midline's points"""
         
         # Check if the midline is selected
@@ -366,7 +393,7 @@ class GenericPath:
         color = Colors.GENERIC_PATH
         pygame.draw.lines(screen, color, False, transformed_points, 3)
     
-    def export(self):
+    def export(self, frontend=False):
         return None, None
 
 class ModeHandler:
@@ -411,6 +438,10 @@ class ModeHandler:
     def get_current_index(self):
         """Get the current index of the mode"""
         return self.current_mode.current_id
+    
+    def get_display_name(self):
+        """Get the display name of the current mode"""
+        return self.current_mode.get_display_name()
     
     def handle_click(self, point, scale, offset, elements):
         """Handle click event based on the current mode"""
@@ -458,6 +489,10 @@ class Mode:
     def decrement_id(self):
         """Decrement the current ID"""
         self.current_id = max(self.current_id - 1, 1)
+        return self.current_id
+    
+    def get_display_name(self):
+        """Get the display name of the current mode"""
         return self.current_id
 
     def handle_click(self, point, scale, offset, elements):
@@ -536,6 +571,33 @@ class StairsMode(Mode):
         return element
 
 
+class BuildingEntranceMode(Mode):
+    """Building entrance interaction mode"""
+    def __init__(self, entrance_names=[]):
+        super().__init__()
+        self.name = "Building Entrance"
+        self.color = Colors.BUILDING_ENTRANCE  # Color for building entrance mode
+        self.activate_key = KeyBindings.BUILDING_ENTRANCE_MODE  # Key to activate building entrance mode
+        self.element = Stairs  # Default element type
+        self.entrance_names = entrance_names  # List of entrance names
+
+    def create_element(self, position):
+        element = self.element(position, self.current_id)
+        self.increment_id()
+        return element
+
+    def set_entrance_names(self, names):
+        """Set the list of entrance names"""
+        self.entrance_names = names if names else []
+        self.name_index = 0
+
+    def get_display_name(self):
+        """Get the display name of the current mode"""
+        if self.current_id < len(self.entrance_names):
+            return self.entrance_names[self.current_id - 1]
+        return "N/A"
+
+
 class NamingMode(Mode):
     """Naming interaction mode"""
     def __init__(self, rooms=[]):
@@ -563,6 +625,9 @@ class NamingMode(Mode):
     def current_id(self, value):
         """Set the current ID"""
         pass
+
+    def get_display_name(self):
+        return self.get_current_name()
 
     def next_name(self):
         """Move to the next room name"""

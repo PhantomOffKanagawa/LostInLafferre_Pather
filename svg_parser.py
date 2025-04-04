@@ -163,7 +163,10 @@ def normalize(shape, max_x, max_y, screen_width, screen_height):
     """
     return [(int(x / max_x * screen_width), int(y / max_y * screen_height)) for x, y in shape]
 
-def export_svg(file_path, element_stores):
+FRONTEND_GROUPS = ["Entrance", "Space", "Wall"]
+FRONTEND_TEXT_GROUPS = ["Space"]
+
+def export_svg(file_path, element_stores, frontend=False):
     """
     Exports shapes to an SVG file.
     
@@ -185,6 +188,9 @@ def export_svg(file_path, element_stores):
     text_group.set("style", f"fill:none;stroke:rgb{Colors.TEXT};stroke-width:2")
     
     for key, value in element_stores.items():
+        if key not in FRONTEND_GROUPS and frontend:
+            continue
+
         print(f"Exporting {key} with {len(value)} elements")
         # print(f"Elements: {value}")
 
@@ -199,10 +205,10 @@ def export_svg(file_path, element_stores):
         
             for element in value:
                 # TODO: Support Text elements
-                svg_element, text_element = element.export()
+                svg_element, text_element = element.export(frontend=frontend)
                 if svg_element is not None:
                     group.append(svg_element)
-                if text_element is not None:
+                if text_element is not None and (not frontend or key in FRONTEND_TEXT_GROUPS):
                     text_group.append(text_element)
 
             svg.append(group)  # Ensure the group is appended to the SVG

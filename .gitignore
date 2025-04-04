@@ -3,6 +3,8 @@ ver-*/
 output/*.svg
 output/*/
 
+*.zip
+
 # Ignore pycache
 __pycache__/
 
