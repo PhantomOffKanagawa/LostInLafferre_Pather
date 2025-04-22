@@ -152,7 +152,7 @@ class BuildingEntrance(MapElement):
             'r': str(self.radius),
             'adjacency': str(self.id),
             'data-id': str(self.id),
-            'data-type': 'stairs'
+            'data-type': 'building-entrance'
         }
         
         circle = ET.Element('circle', **attrs)
@@ -578,7 +578,7 @@ class BuildingEntranceMode(Mode):
         self.name = "Building Entrance"
         self.color = Colors.BUILDING_ENTRANCE  # Color for building entrance mode
         self.activate_key = KeyBindings.BUILDING_ENTRANCE_MODE  # Key to activate building entrance mode
-        self.element = Stairs  # Default element type
+        self.element = BuildingEntrance  # Default element type
         self.entrance_names = entrance_names  # List of entrance names
 
     def create_element(self, position):
@@ -593,7 +593,7 @@ class BuildingEntranceMode(Mode):
 
     def get_display_name(self):
         """Get the display name of the current mode"""
-        if self.current_id < len(self.entrance_names):
+        if self.current_id < len(self.entrance_names) + 1:
             return self.entrance_names[self.current_id - 1]
         return "N/A"
 

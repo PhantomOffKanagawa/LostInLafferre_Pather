@@ -20,7 +20,7 @@ class MapWindow:
         self.map_name = map_name
         self.on_close = on_close
 
-        self.element_classes = [ Space, Wall, Entrance, Elevator, Stairs, MidlinePath ]
+        self.element_classes = [ Space, Wall, Entrance, Elevator, Stairs, BuildingEntrance, MidlinePath ]
         self.element_stores = {cls.__name__: [] for cls in self.element_classes}
 
         # Parse SVG file
@@ -242,14 +242,14 @@ class MapWindow:
         """Calculate midline paths for selected spaces"""
         # Get list of selected spaces and their indices
         selected_spaces = [(i, space) for i, space in enumerate(self.element_stores['Space']) if space.selected]
-        named_space_indices = [i for i, space in enumerate(self.element_stores['Space']) if space.name]
+        # named_space_indices = [i for i, space in enumerate(self.element_stores['Space']) if space.name]
         
         self.element_stores['MidlinePath'] = []
         
         for i, space in selected_spaces:
             # Skip named spaces
-            if i in named_space_indices:
-                continue
+            # if i in named_space_indices:
+            #     continue
                 
             print(f"Calculating midline for space {i + 1}")
             midline_path = find_midline_path(polygon=space.points)
@@ -282,6 +282,13 @@ class MapWindow:
                     nearest_point = nearest_point_on_line(stair.position, midline_path)
                     self.element_stores['MidlinePath'].append(MidlinePath([stair.position, nearest_point], 
                                                         len(self.element_stores['MidlinePath'])))
+            
+            # Add paths from building entrances to the nearest point on the midline
+            for entrance in self.element_stores['BuildingEntrance']:
+                if is_point_inside_polygon(entrance.position, space.points, tolerance=5):
+                    nearest_point = nearest_point_on_line(entrance.position, midline_path)
+                    self.element_stores['MidlinePath'].append(MidlinePath([entrance.position, nearest_point], 
+                                                        len(self.element_stores['MidlinePath'])))
         
         print(f"Generated {len(self.element_stores['MidlinePath'])} midline path segments")
     
@@ -290,10 +297,12 @@ class MapWindow:
         # Save the current selection state
         previous_selection = [space.selected for space in self.element_stores['Space']]
         
-        # Select all spaces except named ones
-        named_indices = [i for i, space in enumerate(self.element_stores['Space']) if space.name]
+        # Select all spaces for midline calculation
+        # named_indices = [i for i, space in enumerate(self.element_stores['Space']) if space.name]
         for i, space in enumerate(self.element_stores['Space']): 
-            space.selected = i not in named_indices
+            # space.selected = i not in named_indices
+            space.selected = True
+            
         
         # Calculate midlines
         self.calculate_midline_paths()
@@ -416,14 +425,14 @@ class MapWindow:
                         stair.selected = s_data.get("selected", False)
                         self.element_stores['Stairs'].append(stair)
                 
-
+                # Load building entrances
                 entrances_data = settings.get("building_entrances", [])
                 if entrances_data:
                     self.element_stores['BuildingEntrance'] = []
                     for e_data in entrances_data:
                         entrance = BuildingEntrance(
                             position=tuple(e_data["position"]), 
-                            entrance_id=e_data.get("id", 1)
+                            building_entrance_id=e_data.get("id", 1)
                         )
                         entrance.selected = e_data.get("selected", False)
                         self.element_stores['BuildingEntrance'].append(entrance)
